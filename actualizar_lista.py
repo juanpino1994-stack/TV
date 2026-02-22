@@ -1,49 +1,42 @@
 import requests
 
-# FUENTES CONFIABLES (Repositorios que se actualizan solos)
+# Fuentes masivas con miles de canales (Latino, España, Premium)
 FUENTES = [
     "https://raw.githubusercontent.com/GuuS-it/IPTV-Latino/master/Lista.m3u",
     "https://raw.githubusercontent.com/marcofbb/iptv/master/latam.m3u",
-    "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/ar.m3u" # Canales Argentina
+    "https://raw.githubusercontent.com/Kuevitas/Kuevitas.github.io/master/lista.m3u"
 ]
 
-# CANALES QUE QUEREMOS PARA EL NICO
-# El robot buscará cualquier canal que contenga estas palabras
-BUSQUEDA = ["TNT SPORTS", "ESPN PREMIUM", "TUDN", "FOX SPORTS", "WIN SPORTS"]
-
 def ejecutar():
-    lista_final = []
-    print("Iniciando recolección de canales...")
+    print("Iniciando recolección masiva de canales...")
+    canales_totales = 0
+    
+    # Usamos un set para no repetir links si están en varias fuentes
+    links_vistos = set()
 
-    for url in FUENTES:
-        try:
-            print(f"Buscando en: {url}")
-            r = requests.get(url, timeout=15)
-            lineas = r.text.split('\n')
-            
-            for i in range(len(lineas)):
-                # Si encontramos un nombre de los que buscamos
-                if any(palabra in lineas[i].upper() for palabra in BUSQUEDA):
-                    # Guardamos la línea del nombre y la línea del link (que es la siguiente)
-                    if i + 1 < len(lineas):
-                        lista_final.append(lineas[i]) # La info del canal (#EXTINF)
-                        lista_final.append(lineas[i+1]) # El link del video
-        except:
-            print(f"Error al conectar con la fuente: {url}")
-
-    # GUARDAR EL ARCHIVO
     with open("lista_nicolas.m3u", "w", encoding="utf-8") as f:
         f.write("#EXTM3U\n")
-        # Usamos set() para no tener canales repetidos
-        escritos = set()
-        for i in range(0, len(lista_final), 2):
-            nombre = lista_final[i]
-            link = lista_final[i+1]
-            if link not in escritos:
-                f.write(f"{nombre}\n{link}\n")
-                escritos.add(link)
+        
+        for url in FUENTES:
+            try:
+                print(f"Descargando fuente: {url}")
+                r = requests.get(url, timeout=20)
+                lineas = r.text.split('\n')
+                
+                for i in range(len(lineas)):
+                    # Si la línea tiene la info del canal
+                    if lineas[i].startswith("#EXTINF"):
+                        if i + 1 < len(lineas):
+                            link = lineas[i+1].strip()
+                            # Si es un link y no lo hemos agregado antes
+                            if link.startswith("http") and link not in links_vistos:
+                                f.write(f"{lineas[i]}\n{link}\n")
+                                links_vistos.add(link)
+                                canales_totales += 1
+            except Exception as e:
+                print(f"No se pudo leer la fuente {url}: {e}")
 
-    print(f"¡Listo! Se encontraron {len(escritos)} canales para el Nico.")
+    print(f"¡Terminado! El Nico ahora tiene {canales_totales} canales en su lista.")
 
 if __name__ == "__main__":
     ejecutar()
