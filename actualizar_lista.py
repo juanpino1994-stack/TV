@@ -1,65 +1,49 @@
 import requests
-import re
 
-# --- LISTA DE CANALES DESDE TUS CAPTURAS ---
-CANALES = [
-    {
-        "nombre": "TNT SPORTS", 
-        "url": "https://deportes.ksdjugfsddeports.com/stream.php?canal=tntsportsar&target=2"
-    },
-    {
-        "nombre": "TUDN", 
-        "url": "https://deportes.ksdjugfsddeports.com/stream.php?canal=tudn&target=1"
-    },
-    {
-        "nombre": "ESPN PREMIUM", 
-        "url": "https://deportes.ksdjugfsddeports.com/stream.php?canal=espnpremium&target=1"
-    }
+# FUENTES CONFIABLES (Repositorios que se actualizan solos)
+FUENTES = [
+    "https://raw.githubusercontent.com/GuuS-it/IPTV-Latino/master/Lista.m3u",
+    "https://raw.githubusercontent.com/marcofbb/iptv/master/latam.m3u",
+    "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/ar.m3u" # Canales Argentina
 ]
 
-def obtener_m3u8(url_fuente):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Referer': 'https://ksdjugfsddeports.com/'
-    }
-    try:
-        # Paso 1: Entrar a la página del canal
-        r1 = requests.get(url_fuente, headers=headers, timeout=10)
-        
-        # Paso 2: Buscar el iframe (lo que sale en tus capturas)
-        embed_match = re.search(r'https?://embed\.ksdjugfsddeports\.com/embed2/[^"\']+\.html', r1.text)
-        
-        if embed_match:
-            url_embed = embed_match.group(0)
-            headers['Referer'] = url_fuente
-            
-            # Paso 3: Entrar al reproductor y buscar el link .m3u8
-            r2 = requests.get(url_embed, headers=headers, timeout=10)
-            video_match = re.search(r'["\'](https?://[^\s\'"]+\.m3u8[^\s\'"]*)["\']', r2.text)
-            
-            if video_match:
-                return video_match.group(1).replace('\\/', '/')
-    except:
-        pass
-    return None
+# CANALES QUE QUEREMOS PARA EL NICO
+# El robot buscará cualquier canal que contenga estas palabras
+BUSQUEDA = ["TNT SPORTS", "ESPN PREMIUM", "TUDN", "FOX SPORTS", "WIN SPORTS"]
 
 def ejecutar():
-    print(f"Actualizando {len(CANALES)} canales...")
-    
+    lista_final = []
+    print("Iniciando recolección de canales...")
+
+    for url in FUENTES:
+        try:
+            print(f"Buscando en: {url}")
+            r = requests.get(url, timeout=15)
+            lineas = r.text.split('\n')
+            
+            for i in range(len(lineas)):
+                # Si encontramos un nombre de los que buscamos
+                if any(palabra in lineas[i].upper() for palabra in BUSQUEDA):
+                    # Guardamos la línea del nombre y la línea del link (que es la siguiente)
+                    if i + 1 < len(lineas):
+                        lista_final.append(lineas[i]) # La info del canal (#EXTINF)
+                        lista_final.append(lineas[i+1]) # El link del video
+        except:
+            print(f"Error al conectar con la fuente: {url}")
+
+    # GUARDAR EL ARCHIVO
     with open("lista_nicolas.m3u", "w", encoding="utf-8") as f:
         f.write("#EXTM3U\n")
-        
-        for canal in CANALES:
-            print(f"Procesando: {canal['nombre']}...")
-            link = obtener_m3u8(canal['url'])
-            
-            if link:
-                f.write(f"#EXTINF:-1, {canal['nombre']}\n")
-                # El "disfraz" para que el Nico no vea el error 403
-                f.write(f"{link}|User-Agent=Mozilla/5.0&Referer=https://embed.ksdjugfsddeports.com/&Origin=https://embed.ksdjugfsddeports.com\n")
-                print(" -> Link encontrado.")
-            else:
-                print(" -> No se pudo extraer el video.")
+        # Usamos set() para no tener canales repetidos
+        escritos = set()
+        for i in range(0, len(lista_final), 2):
+            nombre = lista_final[i]
+            link = lista_final[i+1]
+            if link not in escritos:
+                f.write(f"{nombre}\n{link}\n")
+                escritos.add(link)
+
+    print(f"¡Listo! Se encontraron {len(escritos)} canales para el Nico.")
 
 if __name__ == "__main__":
     ejecutar()
