@@ -1,0 +1,21 @@
+name: Actualizador del Nico
+on:
+  schedule:
+    - cron: '0 * * * *' # Esto le dice al robot: "Despierta cada 1 hora"
+  workflow_dispatch: # Esto te da un botón para despertarlo cuando tú quieras
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+      - run: pip install requests
+      - run: python actualizar_lista.py
+      - run: |
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git add lista_nicolas.m3u
+          git commit -m "Links actualizados" || exit 0
+          git push
