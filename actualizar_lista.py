@@ -14,16 +14,19 @@ def ejecutar():
         # Buscamos el link .m3u8
         match = re.search(r'["\'](https?://[^\s\'"]+\.m3u8[^\s\'"]*)["\']', response.text)
         
-        # IMPORTANTE: Así se escribe el archivo para que la App lo detecte
-        with open("lista_nicolas.m3u", "w", encoding="utf-8") as f:
+        # Forzamos que el archivo se escriba en formato estándar de texto
+        with open("lista_nicolas.m3u", "w", encoding="utf-8", newline='\n') as f:
             f.write("#EXTM3U\n")
             if match:
                 link_raw = match.group(1).replace('\\/', '/')
-                # El disfraz se pone con el simbolo |
+                # El formato exacto: #EXTINF, luego nombre, luego link en linea nueva
                 f.write("#EXTINF:-1, TNT SPORTS\n")
                 f.write(f"{link_raw}|User-Agent=Mozilla/5.0&Referer=https://embed.ksdjugfsddeports.com/\n")
                 print("Canal escrito correctamente.")
             else:
+                # Si no hay link, ponemos uno de error para que la app al menos lea ALGO
+                f.write("#EXTINF:-1, ERROR - CANAL NO ENCONTRADO\n")
+                f.write("http://error.com/video.m3u8\n")
                 print("No se encontró link.")
                 
     except Exception as e:
