@@ -1,7 +1,6 @@
 import requests
 import re
 
-# Canal específico de prueba
 URL_STREAM = "https://deportes.ksdjugfsddeports.com/stream.php?canal=tntsportsar&target=2"
 
 def ejecutar():
@@ -11,26 +10,24 @@ def ejecutar():
     }
     
     try:
-        # 1. El robot intenta entrar a la señal
         response = requests.get(URL_STREAM, headers=headers, timeout=15)
-        
-        # 2. Busca el link .m3u8 entre las comillas
+        # Buscamos el link .m3u8
         match = re.search(r'["\'](https?://[^\s\'"]+\.m3u8[^\s\'"]*)["\']', response.text)
         
-        with open("lista_nicolas.m3u", "w") as f:
+        # IMPORTANTE: Así se escribe el archivo para que la App lo detecte
+        with open("lista_nicolas.m3u", "w", encoding="utf-8") as f:
             f.write("#EXTM3U\n")
             if match:
                 link_raw = match.group(1).replace('\\/', '/')
-                # 3. Agregamos el "disfraz" al final del link para saltar el bloqueo
-                link_con_disfraz = f"{link_raw}|User-Agent=Mozilla/5.0&Referer=https://embed.ksdjugfsddeports.com/"
-                f.write(f"#EXTINF:-1, TNT SPORTS\n{link_con_disfraz}\n")
-                print("¡Éxito! Link generado con disfraz.")
+                # El disfraz se pone con el simbolo |
+                f.write("#EXTINF:-1, TNT SPORTS\n")
+                f.write(f"{link_raw}|User-Agent=Mozilla/5.0&Referer=https://embed.ksdjugfsddeports.com/\n")
+                print("Canal escrito correctamente.")
             else:
-                f.write("#EXTINF:-1, Canal no encontrado en el codigo\nhttp://error.com\n")
-                print("No se encontró el link m3u8.")
+                print("No se encontró link.")
                 
     except Exception as e:
-        print(f"Error al conectar: {e}")
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
     ejecutar()
